@@ -58,20 +58,3 @@ Adjust the availability_zones variable according to your region.
 lua
 
 ---
-
-#### **g. examples/basic-usage/main.tf**
-
-Provide an example of how to use the module:
-
-```hcl
-module "vpc" {
-  source = "../../"
-
-  name               = "example-vpc"
-  vpc_cidr           = "10.0.0.0/16"
-  availability_zones = ["us-east-1a", "us-east-1b", "us-east-1c"]
-  tags = {
-    Environment = "development"
-    Owner       = "user@example.com"
-  }
-}

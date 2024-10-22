@@ -1,4 +1,4 @@
-# Create VPC
+# Create the VPC
 resource "aws_vpc" "this" {
   cidr_block           = var.vpc_cidr
   enable_dns_support   = true
@@ -73,7 +73,7 @@ resource "aws_subnet" "data" {
   )
 }
 
-# Public Route Table
+# Create Public Route Table for DMZ subnets
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.this.id
 
@@ -99,8 +99,8 @@ resource "aws_route_table_association" "dmz" {
 
 # NAT Gateways
 resource "aws_eip" "nat" {
-  count = length(var.availability_zones)
-  vpc   = true
+  count  = length(var.availability_zones)
+  domain = "vpc"  # Use domain instead of vpc (correcting the deprecation warning)
 
   tags = merge(
     var.tags,
@@ -123,9 +123,9 @@ resource "aws_nat_gateway" "this" {
   )
 }
 
-# Private Route Tables for Logic Subnets
+# Create separate Route Tables for each Logic Subnet
 resource "aws_route_table" "logic" {
-  count  = length(var.availability_zones)
+  count  = length(var.availability_zones) # One route table per Logic subnet
   vpc_id = aws_vpc.this.id
 
   route {
@@ -141,15 +141,16 @@ resource "aws_route_table" "logic" {
   )
 }
 
+# Associate each Logic Subnet with its Route Table
 resource "aws_route_table_association" "logic" {
   count          = length(aws_subnet.logic)
   subnet_id      = aws_subnet.logic[count.index].id
   route_table_id = aws_route_table.logic[count.index].id
 }
 
-# Private Route Tables for Data Subnets
+# Create separate Route Tables for each Data Subnet
 resource "aws_route_table" "data" {
-  count  = length(var.availability_zones)
+  count  = length(var.availability_zones) # One route table per Data subnet
   vpc_id = aws_vpc.this.id
 
   route {
@@ -165,6 +166,7 @@ resource "aws_route_table" "data" {
   )
 }
 
+# Associate each Data Subnet with its Route Table
 resource "aws_route_table_association" "data" {
   count          = length(aws_subnet.data)
   subnet_id      = aws_subnet.data[count.index].id

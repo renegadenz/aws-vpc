@@ -22,3 +22,7 @@ output "nat_gateway_ids" {
   description = "List of NAT Gateway IDs"
   value       = aws_nat_gateway.this[*].id
 }
+output "vpc_flow_logs_log_group" {
+  description = "The CloudWatch Log Group for VPC Flow Logs"
+  value       = aws_cloudwatch_log_group.vpc_flow_logs.name
+}

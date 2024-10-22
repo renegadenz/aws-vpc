@@ -1,3 +1,9 @@
+# Define the AWS provider and region
+provider "aws" {
+  region  = "us-east-1"
+  profile = "my-profile"  # Optional: Set the AWS profile if needed
+}
+
 # Create the VPC
 resource "aws_vpc" "this" {
   cidr_block           = var.vpc_cidr
@@ -85,7 +91,7 @@ resource "aws_route_table" "public" {
   tags = merge(
     var.tags,
     {
-      Name = "${var.name}-public-rt"
+      Name = "${var.name}-dmz-rt"
     }
   )
 }
@@ -100,7 +106,7 @@ resource "aws_route_table_association" "dmz" {
 # NAT Gateways
 resource "aws_eip" "nat" {
   count  = length(var.availability_zones)
-  domain = "vpc"  # Use domain instead of vpc (correcting the deprecation warning)
+  domain = "vpc"  # Updated to use 'domain' instead of 'vpc'
 
   tags = merge(
     var.tags,
@@ -171,4 +177,63 @@ resource "aws_route_table_association" "data" {
   count          = length(aws_subnet.data)
   subnet_id      = aws_subnet.data[count.index].id
   route_table_id = aws_route_table.data[count.index].id
+}
+
+# CloudWatch Log Group for VPC Flow Logs
+resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
+  name = "${var.name}-vpc-flow-logs"
+  retention_in_days = 30
+
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.name}-vpc-flow-logs"
+    }
+  )
+}
+
+# IAM Role for VPC Flow Logs
+resource "aws_iam_role" "vpc_flow_logs_role" {
+  name = "${var.name}-vpc-flow-logs-role"
+
+  assume_role_policy = jsonencode({
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Action": "sts:AssumeRole",
+        "Effect": "Allow",
+        "Principal": {
+          "Service": "vpc-flow-logs.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.name}-vpc-flow-logs-role"
+    }
+  )
+}
+
+# Attach AWS-managed VPC Flow Logs policy to the role
+resource "aws_iam_role_policy_attachment" "vpc_flow_logs_attachment" {
+  role       = aws_iam_role.vpc_flow_logs_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonVPCCrossAccountNetworkInterfaceOperations"
+}
+
+# Create VPC Flow Logs
+resource "aws_flow_log" "vpc_flow_logs" {
+  log_destination      = aws_cloudwatch_log_group.vpc_flow_logs.arn
+  iam_role_arn         = aws_iam_role.vpc_flow_logs_role.arn
+  traffic_type         = "ALL"  # You can change this to "REJECT" or "ACCEPT" if needed
+  vpc_id               = aws_vpc.this.id
+
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.name}-vpc-flow-log"
+    }
+  )
 }

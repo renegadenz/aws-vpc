@@ -1,9 +1,3 @@
-# Define the AWS provider and region
-provider "aws" {
-  region  = "us-east-1"
-  profile = "my-profile"  # Optional: Set the AWS profile if needed
-}
-
 # Create the VPC
 resource "aws_vpc" "this" {
   cidr_block           = var.vpc_cidr
